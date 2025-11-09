@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Customer Ledger Viewer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
+      color: #333;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      background: #ffffff;
+      padding: 16px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      z-index: 10;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #0066cc;
+      outline: none;
+    }
+
+    #tableContainer {
+      padding: 10px;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      min-width: 300px;
+    }
+
+    th,
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #fafafa;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 10px;
+      flex-wrap: wrap;
+    }
+
+    .pagination button {
+      min-width: 80px;
+    }
+
+    .page-info {
+      font-size: 14px;
+      color: #666;
+      padding: 0 10px;
+    }
+
+    .total-records {
+      text-align: center;
+      padding: 10px;
+      background: white;
+      margin: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #666;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 10px;
+    }
+
+    .modal-content {
+      background: #fff;
+      border-radius: 18px;
+      padding: 20px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      position: relative;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 28px;
+      cursor: pointer;
+      color: #888;
+      background: none;
+      border: none;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      line-height: 28px;
+      text-align: center;
+    }
+
+    .close-btn:hover {
+      color: #333;
+      background: none;
+    }
+
+    .modal-title {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 15px;
+      margin-top: 5px;
+      font-weight: 600;
+      padding-right: 30px;
+    }
+
+    .ledger-summary {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .summary-item {
+      text-align: center;
+    }
+
+    .summary-label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .summary-value.debit {
+      color: #dc3545;
+    }
+
+    .summary-value.credit {
+      color: #28a745;
+    }
+
+    .summary-value.balance {
+      color: #007bff;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 600px) {
+
+      th,
+      td {
+        font-size: 13px;
+        padding: 10px 8px;
+      }
+
+      .modal-title {
+        font-size: 18px;
+      }
+
+      button {
+        font-size: 13px;
+        padding: 6px 12px;
+      }
+
+      .modal-content {
+        padding: 15px;
+        border-radius: 12px;
+      }
+
+      .summary-value {
+        font-size: 16px;
+      }
+
+      .ledger-summary {
+        gap: 8px;
+      }
+
+      .pagination {
+        gap: 5px;
+      }
+
+      .pagination button {
+        min-width: 60px;
+        padding: 6px 10px;
+      }
+
+      .page-info {
+        font-size: 12px;
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <input type="text" id="searchInput" placeholder="🔍 Search by Name, Contact, or Area..." oninput="searchData()" />
+  </header>
+
+  <div id="tableContainer" class="loading">Loading...</div>
+
+  <!-- Ledger Detail Modal -->
+  <div id="detailModal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+      <h2 class="modal-title" id="modalCustomerName">📋 Ledger Details</h2>
+      <div id="ledgerSummary"></div>
+      <div class="table-wrapper">
+        <div id="modalTableContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SQLite Logic -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+  <script>
+    let db = null;
+    let currentPage = 1;
+    let pageSize = 50;
+    let currentSearchQuery = "";
+    let totalRecords = 0;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const SQL = await initSqlJs({
+          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
+        });
+
+        const buffer = await fetch("IMS.db?v=" + new Date().getTime()).then(res => res.arrayBuffer());
+        db = new SQL.Database(new Uint8Array(buffer));
+        await loadData();
+      } catch (err) {
+        const container = document.getElementById("tableContainer");
+        container.innerHTML = '<div class="no-data">❌ SQLite not supported in this browser or Private Mode.<br>Please disable Private Mode on iPhone.</div>';
+        console.error(err);
+      }
+    });
+
+    function searchData() {
+      currentSearchQuery = document.getElementById("searchInput").value;
+      currentPage = 1;
+      loadData();
+    }
+
+    function getTotalRecords() {
+      let countSql = `SELECT COUNT(*) as total FROM tbl_customer`;
+      if (currentSearchQuery.trim()) {
+        const searchTerm = currentSearchQuery.trim();
+        countSql += ` WHERE 
+          TRIM(IFNULL(Name,'')) LIKE '%${searchTerm}%' OR 
+          TRIM(IFNULL(Contact,'')) LIKE '%${searchTerm}%' OR 
+          TRIM(IFNULL(Area,'')) LIKE '%${searchTerm}%'`;
+      }
+
+      try {
+        const countRes = db.exec(countSql);
+        if (countRes.length && countRes[0].values.length) {
+          totalRecords = countRes[0].values[0][0];
+        }
+      } catch (e) {
+        console.error("Error getting count:", e);
+        totalRecords = 0;
+      }
+    }
+
+    async function loadData() {
+      if (!db) return;
+
+      getTotalRecords();
+
+      const offset = (currentPage - 1) * pageSize;
+      let sql = `SELECT Name, Contact, Area, id FROM tbl_customer `;
+      
+      if (currentSearchQuery.trim()) {
+        const searchTerm = currentSearchQuery.trim();
+        sql += `WHERE 
+          TRIM(IFNULL(Name,'')) LIKE '%${searchTerm}%' OR 
+          TRIM(IFNULL(Contact,'')) LIKE '%${searchTerm}%' OR 
+          TRIM(IFNULL(Area,'')) LIKE '%${searchTerm}%' `;
+      }
+      
+      sql += `ORDER BY Name LIMIT ${pageSize} OFFSET ${offset}`;
+
+      try {
+        const res = db.exec(sql);
+        const container = document.getElementById("tableContainer");
+        
+        if (!res.length || res[0].values.length === 0) {
+          container.innerHTML = '<div class="no-data">No customers found.</div>';
+          return;
+        }
+
+        const { values } = res[0];
+        const totalPages = Math.ceil(totalRecords / pageSize);
+        
+        let html = '';
+        
+        // Total records info
+        html += `<div class="total-records">
+          Showing ${offset + 1} - ${Math.min(offset + pageSize, totalRecords)} of ${totalRecords} customers
+        </div>`;
+
+        // Table
+        html += '<div class="table-wrapper"><table><thead><tr>';
+        html += '<th>Name</th><th>Contact</th><th>Area</th><th>Action</th>';
+        html += '</tr></thead><tbody>';
+
+        values.forEach(row => {
+          const [name, contact, area, id] = row;
+          html += '<tr>';
+          html += `<td>${name || '-'}</td>`;
+          html += `<td>${contact || '-'}</td>`;
+          html += `<td>${area || '-'}</td>`;
+          html += `<td><button onclick="showLedger('${id}', '${(name || '').replace(/'/g, "\\'")}')">View Ledger</button></td>`;
+          html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        // Pagination
+        if (totalPages > 1) {
+          html += '<div class="pagination">';
+          html += `<button onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>First</button>`;
+          html += `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+          html += `<span class="page-info">Page ${currentPage} of ${totalPages}</span>`;
+          html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+          html += `<button onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Last</button>`;
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+      } catch (e) {
+        document.getElementById("tableContainer").innerHTML = `<div class="no-data">❌ Query Error: ${e.message}</div>`;
+        console.error(e);
+      }
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      loadData();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showLedger(id, customerName) {
+      if (!db) return;
+
+      try {
+        const res = db.exec(`SELECT Date, Debit, Credit, Description, Balance FROM tblledger WHERE id = '${id}' ORDER BY Date`);
+        
+        if (!res.length || res[0].values.length === 0) {
+          alert("❌ No ledger entries found for this customer.");
+          return;
+        }
+
+        const { columns, values } = res[0];
+        
+        // Calculate totals
+        let totalDebit = 0;
+        let totalCredit = 0;
+        let finalBalance = 0;
+
+        values.forEach(row => {
+          const debit = parseFloat(row[1]) || 0;
+          const credit = parseFloat(row[2]) || 0;
+          const balance = parseFloat(row[4]) || 0;
+          
+          totalDebit += debit;
+          totalCredit += credit;
+          finalBalance = balance; // Last balance
+        });
+
+        // Update modal title
+        document.getElementById("modalCustomerName").textContent = `📋 ${customerName || 'Customer'} - Ledger`;
+
+        // Create summary
+        const summaryHtml = `
+          <div class="ledger-summary">
+            <div class="summary-item">
+              <div class="summary-label">Total Debit</div>
+              <div class="summary-value debit">${totalDebit.toFixed(2)}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Total Credit</div>
+              <div class="summary-value credit">${totalCredit.toFixed(2)}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">Balance</div>
+              <div class="summary-value balance">${finalBalance.toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+        document.getElementById("ledgerSummary").innerHTML = summaryHtml;
+
+        // Create table
+        let html = '<table><thead><tr>';
+        columns.forEach(col => {
+          html += `<th>${col}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        values.forEach(row => {
+          html += '<tr>';
+          row.forEach((cell, i) => {
+            const value = cell || '-';
+            html += `<td>${value}</td>`;
+          });
+          html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+
+        document.getElementById("modalTableContainer").innerHTML = html;
+        document.getElementById("detailModal").style.display = "flex";
+      } catch (e) {
+        alert("❌ Error loading ledger: " + e.message);
+        console.error(e);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById("detailModal").style.display = "none";
+    }
+
+    function closeModalOnOverlay(event) {
+      if (event.target.classList.contains('modal-overlay')) {
+        closeModal();
+      }
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+
+</html>
