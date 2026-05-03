@@ -488,6 +488,11 @@
           finalBalance = balance; // Last balance
         });
 
+        // Calculate net balance
+let netBalance = totalDebit - totalCredit;
+let balanceType = netBalance >= 0 ? 'Debit' : 'Credit';
+let displayBalance = Math.abs(netBalance).toFixed(2);
+
         // Update modal title
         document.getElementById("modalCustomerName").textContent = `📋 ${customerName || 'Customer'} - Ledger`;
 
@@ -504,7 +509,9 @@
             </div>
             <div class="summary-item">
               <div class="summary-label">Balance</div>
-              <div class="summary-value balance">${finalBalance.toFixed(2)}</div>
+              <div class="summary-value balance">
+  ${displayBalance} (${balanceType})
+</div>
             </div>
           </div>
         `;
